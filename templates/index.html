@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="AI-powered CBCT Maxillary Sinus segmentation using U-Net, Grad-CAM Explainable AI (XAI), and Gemini Multimodal Radiologist Assistant.">
+  <title>Maxillary Sinus AI Workstation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+  <div class="page-wrapper">
+
+    <!-- ── Navbar ── -->
+    <nav class="navbar container">
+      <a class="navbar-brand" href="/">
+        <span class="brand-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+          </svg>
+        </span>
+        MAXILLA <span class="brand-accent">CBCT AI</span> WORKSTATION
+      </a>
+      <div class="nav-badges">
+        <span class="navbar-badge badge-unet">U-Net AI</span>
+        <span class="navbar-badge badge-xai">Grad-CAM XAI</span>
+        <span class="navbar-badge badge-gemini">Gemini 3.8</span>
+      </div>
+    </nav>
+
+    <!-- ── Main Content ── -->
+    <main class="container">
+
+      <!-- Hero Section -->
+      <div class="hero">
+        <div class="hero-pill">
+          <span class="pulse-dot"></span>
+          Clinical AI Diagnostic Engine Active
+        </div>
+        <h1>Maxillary Sinus<br><span class="gradient-text">Segmentation &amp; XAI Analytics</span></h1>
+        <p class="subtitle">Upload a patient CBCT scan to run U-Net 2D segmentation, compute Grad-CAM Explainable AI
+          heatmaps, and auto-generate Gemini Clinical Diagnostic Reports.</p>
+      </div>
+
+      <!-- Main Upload Card -->
+      <div class="card main-card">
+
+        {% if model_error %}
+        <div class="error-banner">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <div>
+            <strong>Model failed to load:</strong> {{ model_error }}<br>
+            Ensure <code>model/best_unet_model_finetuned.pth</code> exists relative to <code>app.py</code>.
+          </div>
+        </div>
+        {% endif %}
+
+        <form action="/predict" method="post" enctype="multipart/form-data" id="upload-form">
+
+          <!-- Drop zone -->
+          <input type="file" name="dicom_file" id="file-input" accept=".zip,.dcm" required style="display:none">
+          <label class="upload-box" id="drop-zone" for="file-input">
+            <div class="upload-icon-circle">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+            </div>
+            <span id="file-label" class="upload-primary-text">
+              <strong>Click to upload</strong> or drag &amp; drop CBCT DICOM scan
+            </span>
+            <p class="upload-formats">Supported formats: .zip (DICOM series) &nbsp;·&nbsp; .dcm (single slice)</p>
+          </label>
+
+          <!-- Selected file badge -->
+          <div id="file-info" class="file-selected-info hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <span id="file-info-name">No file selected</span>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Single Clean Option (Gemini API Key field removed - handled automatically via .env) -->
+          <div class="option-row-single">
+            <label for="sample_every_n">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <line x1="3" y1="9" x2="21" y2="9" />
+                <line x1="3" y1="15" x2="21" y2="15" />
+              </svg>
+              Process every Nth slice:
+            </label>
+            <div class="input-inline">
+              <input type="number" name="sample_every_n" id="sample_every_n" value="5" min="1">
+              <span class="hint">(Sample rate for multi-slice DICOM series)</span>
+            </div>
+          </div>
+
+          <!-- Feature Badges -->
+          <div class="feature-badges">
+            <span class="feat-badge"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12" />
+              </svg> 2D U-Net Model</span>
+            <span class="feat-badge"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12" />
+              </svg> Grad-CAM XAI Saliency</span>
+            <span class="feat-badge"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12" />
+              </svg> Sinus Volume cm³ Metric</span>
+            <span class="feat-badge"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12" />
+              </svg> Automated Gemini Diagnostic Report</span>
+          </div>
+
+          <!-- Submit Button -->
+          <button type="submit" id="submit-btn" class="btn-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3" />
+            </svg>
+            Run AI Segmentation &amp; Diagnosis
+          </button>
+        </form>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- ════════════════════════════════
+     LOADING OVERLAY
+     ════════════════════════════════ -->
+  <div id="loading" role="status" aria-live="polite" aria-label="Processing scan">
+
+    <div class="scan-ring-wrapper">
+      <div class="scan-ring scan-ring-1"></div>
+      <div class="scan-ring scan-ring-2"></div>
+      <div class="scan-ring scan-ring-3"></div>
+      <div class="scan-icon-center">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+        </svg>
+      </div>
+    </div>
+
+    <div class="scan-progress-track">
+      <div class="scan-progress-bar"></div>
+    </div>
+
+    <p class="loading-title">
+      Analyzing Scan &amp; Computing AI Diagnostics
+      <span class="loading-dots">
+        <span>.</span><span>.</span><span>.</span>
+      </span>
+    </p>
+    <p class="loading-msg">Segmenting maxillary sinus slices, computing Grad-CAM XAI heatmaps, and generating Gemini
+      clinical report.</p>
+
+    <div class="loading-steps" id="loading-steps">
+      <div class="step active" id="step-1">
+        <span class="step-dot"></span> Reading DICOM volume &amp; metadata
+      </div>
+      <div class="step" id="step-2">
+        <span class="step-dot"></span> Preprocessing axial CBCT slices
+      </div>
+      <div class="step" id="step-3">
+        <span class="step-dot"></span> Running U-Net inference &amp; Grad-CAM XAI
+      </div>
+      <div class="step" id="step-4">
+        <span class="step-dot"></span> Generating Gemini Radiological Report
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const form = document.getElementById('upload-form');
+    const fileInput = document.getElementById('file-input');
+    const fileLabel = document.getElementById('file-label');
+    const fileInfo = document.getElementById('file-info');
+    const fileInfoName = document.getElementById('file-info-name');
+    const loading = document.getElementById('loading');
+    const submitBtn = document.getElementById('submit-btn');
+    const dropZone = document.getElementById('drop-zone');
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length > 0) {
+        const name = fileInput.files[0].name;
+        fileInfoName.textContent = name;
+        fileInfo.classList.remove('hidden');
+        fileLabel.innerHTML = '<strong>File ready</strong> — click to change';
+      }
+    });
+
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        fileInput.files = files;
+        fileInput.dispatchEvent(new Event('change'));
+      }
+    });
+
+    form.addEventListener('submit', () => {
+      loading.classList.add('active');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1s linear infinite">
+        <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+      </svg>
+      Processing Workstation Pipeline…`;
+
+      const steps = ['step-1', 'step-2', 'step-3', 'step-4'];
+      const delays = [0, 2500, 6000, 12000];
+      steps.forEach((id, i) => {
+        setTimeout(() => {
+          if (i > 0) {
+            const prev = document.getElementById(steps[i - 1]);
+            prev.classList.remove('active');
+            prev.classList.add('done');
+          }
+          document.getElementById(id).classList.add('active');
+        }, delays[i]);
+      });
+    });
+  </script>
+</body>
+
+</html>
